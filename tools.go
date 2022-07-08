@@ -250,16 +250,14 @@ func (t *Tools) UploadFiles(r *http.Request, uploadDir string, rename ...bool) (
 					return nil, err
 				}
 
-				allowed := false
+				allowed := true
 				filetype := http.DetectContentType(buff)
 				if len(t.AllowedFileTypes) > 0 {
 					for _, x := range t.AllowedFileTypes {
-						if strings.EqualFold(filetype, x) {
-							allowed = true
+						if !strings.EqualFold(filetype, x) {
+							allowed = false
 						}
 					}
-				} else {
-					allowed = true
 				}
 
 				if !allowed {
@@ -272,10 +270,9 @@ func (t *Tools) UploadFiles(r *http.Request, uploadDir string, rename ...bool) (
 					return nil, err
 				}
 
+				uploadedFile.NewFileName = hdr.Filename
 				if renameFile {
 					uploadedFile.NewFileName = fmt.Sprintf("%s%s", t.RandomString(25), filepath.Ext(hdr.Filename))
-				} else {
-					uploadedFile.NewFileName = hdr.Filename
 				}
 				uploadedFile.OriginalFileName = hdr.Filename
 
@@ -284,13 +281,13 @@ func (t *Tools) UploadFiles(r *http.Request, uploadDir string, rename ...bool) (
 
 				if outfile, err = os.Create(filepath.Join(uploadDir, uploadedFile.NewFileName)); nil != err {
 					return nil, err
-				} else {
-					fileSize, err := io.Copy(outfile, infile)
-					if err != nil {
-						return nil, err
-					}
-					uploadedFile.FileSize = fileSize
 				}
+
+				fileSize, err := io.Copy(outfile, infile)
+				if err != nil {
+					return nil, err
+				}
+				uploadedFile.FileSize = fileSize
 
 				uploadedFiles = append(uploadedFiles, &uploadedFile)
 
